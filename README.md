@@ -1,6 +1,30 @@
-# RackMotion
+<p align="center">
+  <img src="https://raw.github.com/drewbug/RackMotion/assets/rackmotion-logo.png" alt="RackMotion" title="RackMotion">
+</p>
 
-TODO: Write a gem description
+RackMotion provides a Rack-like interface for middleware that can intercept and alter HTTP requests and responses in RubyMotion. It's built on top of NSURLProtocol, which makes it, to borrow a line from [Mattt Thompson](http://www.nshipster.com/nsurlprotocol/), an Apple-sanctioned man-in-the-middle attack.
+
+For example, here's how easy it is to enable [cross-origin resource sharing](http://en.wikipedia.org/wiki/Cross-origin_resource_sharing) for most Javascript XMLHttpRequests:
+
+    class EnableCORS
+      def initialize(app)
+        @app = app
+      end
+      
+      def call(request)
+        status, headers, data = @app.call(request)
+        
+        if request.allHTTPHeaderFields['Origin']
+          headers['Access-Control-Allow-Origin'] = request.allHTTPHeaderFields['Origin']
+        end
+        
+        return status, headers, data
+      end
+    end
+
+And then, in your AppDelegate:
+
+    RackMotion.use EnableCORS
 
 ## Installation
 
@@ -15,15 +39,3 @@ And then execute:
 Or install it yourself as:
 
     $ gem install RackMotion
-
-## Usage
-
-TODO: Write usage instructions here
-
-## Contributing
-
-1. Fork it
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create new Pull Request
