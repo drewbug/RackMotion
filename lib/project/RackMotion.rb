@@ -4,6 +4,16 @@ module RackMotion
     URLProtocol.middlewares << middleware
   end
 
+  def self.cease(middleware)
+    URLProtocol.middlewares.delete middleware
+    NSURLProtocol.unregisterClass URLProtocol if URLProtocol.middlewares.empty?
+  end
+
+  def self.cease_all
+    URLProtocol.middlewares = []
+    NSURLProtocol.unregisterClass URLProtocol
+  end
+
   class URLProtocol < NSURLProtocol
     @@middlewares = []
 
