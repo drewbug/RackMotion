@@ -1,46 +1,64 @@
+class MirrorApp
+  def call(request)
+    raw = { url: request.URL.absoluteString,
+            headers: request.allHTTPHeaderFields,
+            body: request.HTTPBody }
+    json = BW::JSON.generate(raw)
+    return 200, {}, json.to_data
+  end
+end
+
 class TestWare
   def initialize(app)
     @app = app
   end
 
   def call(request)
+    request.addValue('true', forHTTPHeaderField: 'TestWare-Request')
+
     status, headers, data = @app.call(request)
 
-    headers['TestWare'] = 'true'
-    status = 203
+    headers['TestWare-Response'] = 'true'
 
     return status, headers, data
   end
 end
 
-describe "Middleware 'TestWare'" do
-  extend WebStub::SpecHelpers
-
+describe "Middleware" do
   before do
-    stub_request(:get, 'http://example.com').to_return(body: "Success!", content_type: 'text/plain')
+    RackMotion.run MirrorApp.new
     RackMotion.use TestWare
 
-    @response = nil
-    BW::HTTP.get('http://example.com') do |response|
-      @response = response
-      resume
-    end
+    connection_delegate = RackMotion::ConnectionDelegate.new
+
+    @thread = NSThread.alloc.initWithTarget(lambda do
+      request = NSURLRequest.requestWithURL NSURL.URLWithString('http://example.com')
+      @connection = NSURLConnection.alloc.initWithRequest(request, delegate: connection_delegate, startImmediately: true)
+      NSRunLoop.currentRunLoop.run
+    end, selector: 'call', object: nil)
+    @thread.start
+
+    connection_delegate.semaphore.wait
+
+    @status = connection_delegate.response.statusCode
+    @headers = connection_delegate.response.allHeaderFields
+    @body = BW::JSON.parse connection_delegate.data
   end
 
-  it "adds a 'TestWare' response header" do
-    wait_max(10) do
-      @response.headers['TestWare'].should == 'true'
-    end
+  it "can add a request header" do
+    @body[:headers]['TestWare-Request'].should.be == 'true'
   end
 
-  it "makes response status code '203'" do
-    wait_max(10) do
-      @response.status_code.should == 203
-    end
+  it "can add a response header" do
+    @headers['TestWare-Response'].should.be == 'true'
   end
 
   after do
-    RackMotion.cease_all
-    reset_stubs
+    @connection.cancel if @connection
+    @thread.cancel if @thread
+
+    @connection = @thread = @status = @headers = @body = nil
+
+    RackMotion.cease
   end
 end
