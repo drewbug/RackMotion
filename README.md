@@ -78,7 +78,7 @@ Currently, only one application can be used at a time. Eventually, something mor
 
 ### Middleware
 
-In RackMotion, middleware is a special type of application. Like an application, all middleware responds to `#call(request)` with the "HTTP triplet" (**status**, **headers**, **body**). The difference, then, is that middleware also have an initializer that takes another application as an argument. This application can then be called during the middleware's `#call(request)` method to "send the request on down the line", if you will.
+In RackMotion, middleware is a special type of application. Like an application, all middleware responds to `#call(request)` with the "HTTP triplet" (the **status**, the **headers**, and the **body**). The difference, then, is that middleware also have an initializer that takes another application as an argument. This application can then be called during the middleware's `#call(request)` method to "send the request on down the line", if you will.
 
 Here's an example:
 
