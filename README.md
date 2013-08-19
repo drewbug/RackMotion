@@ -54,7 +54,7 @@ In RackMotion, an application is anything that responds to `#call(request)` with
       end
     end
 
-Or, it could be method:
+Or, it could be a method:
 
     def ruby_motion_timespan(request)
       return [200, {'Content-Type' => 'text/plain'}, "RubyMotion Forever!".to_data]
