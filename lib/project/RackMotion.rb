@@ -54,7 +54,7 @@ module RackMotion
 
         status, headers, data = chain.call self.request.mutableCopy
 
-        response = NSHTTPURLResponse.alloc.initWithURL self.request.URL, statusCode: status, HTTPVersion: 'HTTP/1.1', headerFields: headers
+        response = NSHTTPURLResponse.alloc.initWithURL self.request.URL, statusCode: status.to_i, HTTPVersion: 'HTTP/1.1', headerFields: headers
 
         self.client.URLProtocol(self, didReceiveResponse: response, cacheStoragePolicy: NSURLCacheStorageNotAllowed)
         self.client.URLProtocol(self, didLoadData: data)
