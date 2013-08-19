@@ -1,24 +1,38 @@
 module RackMotion
   def self.use(middleware)
-    NSURLProtocol.registerClass URLProtocol if URLProtocol.middlewares.empty?
+    self.registerURLProtocol
     URLProtocol.middlewares << middleware
   end
 
-  def self.cease(middleware)
-    URLProtocol.middlewares.delete middleware
-    NSURLProtocol.unregisterClass URLProtocol if URLProtocol.middlewares.empty?
+  def self.run(app)
+    self.registerURLProtocol
+    URLProtocol.app = app
   end
 
-  def self.cease_all
+  def self.cease
     URLProtocol.middlewares = []
+    URLProtocol.app = nil
     NSURLProtocol.unregisterClass URLProtocol
   end
 
   class URLProtocol < NSURLProtocol
     @@middlewares = []
+    @@app = nil
 
     def self.middlewares
       @@middlewares
+    end
+
+    def self.middlewares=(obj)
+      @@middlewares = obj
+    end
+
+    def self.app
+      @@app
+    end
+
+    def self.app=(obj)
+      @@app = obj
     end
 
     def self.canInitWithRequest(request)
@@ -33,13 +47,14 @@ module RackMotion
 
     def startLoading
       @thread = NSThread.alloc.initWithTarget(lambda do
-        chain = @@middlewares.inject(self) do |instance, klass|
+
+        chain = @@middlewares.inject(@@app ? @@app : self) do |instance, klass|
           klass.new(instance)
         end
 
         status, headers, data = chain.call self.request.mutableCopy
 
-        response = NSHTTPURLResponse.alloc.initWithURL @connection.originalRequest.URL, statusCode: status, HTTPVersion: 'HTTP/1.1', headerFields: headers
+        response = NSHTTPURLResponse.alloc.initWithURL self.request.URL, statusCode: status, HTTPVersion: 'HTTP/1.1', headerFields: headers
 
         self.client.URLProtocol(self, didReceiveResponse: response, cacheStoragePolicy: NSURLCacheStorageNotAllowed)
         self.client.URLProtocol(self, didLoadData: data)
@@ -87,4 +102,11 @@ module RackMotion
       @semaphore.signal
     end
   end
+
+  private
+    def self.registerURLProtocol
+      if URLProtocol.middlewares.empty? && URLProtocol.app.nil?
+        NSURLProtocol.registerClass URLProtocol
+      end
+    end
 end
